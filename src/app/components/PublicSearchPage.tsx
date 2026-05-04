@@ -3,51 +3,33 @@ import { useNavigate } from "react-router";
 import { Search, Package, Building2, LogIn } from "lucide-react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { getPublicOrder } from "@/api/orders";
 
 export function PublicSearchPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const mockOrders = [
-    {
-      id: "PED-2026-001",
-      date: "2026-04-15",
-      status: "entregado",
-      items: 12,
-    },
-    {
-      id: "PED-2026-045",
-      date: "2026-04-20",
-      status: "en-proceso",
-      items: 8,
-    },
-    {
-      id: "PED-2026-089",
-      date: "2026-04-25",
-      status: "pendiente",
-      items: 15,
-    },
-    {
-      id: "PED-2026-033",
-      date: "2026-04-18",
-      status: "en-transito",
-      items: 10,
-    },
-  ];
-
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setHasSearched(true);
 
     if (searchTerm.trim()) {
-      const results = mockOrders.filter(
-        (order) =>
-          order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          order.date.includes(searchTerm)
-      );
-      setSearchResults(results);
+      setLoading(true);
+      try {
+        const order = await getPublicOrder(searchTerm.trim());
+        if (order) {
+          setSearchResults([order]);
+        } else {
+          setSearchResults([]);
+        }
+      } catch (err) {
+        setSearchResults([]);
+      } finally {
+        setLoading(false);
+      }
     } else {
       setSearchResults([]);
     }
@@ -55,33 +37,17 @@ export function PublicSearchPage() {
 
   const getStatusInfo = (status: string) => {
     const variants = {
-      entregado: {
-        label: "Entregado",
-        className: "bg-green-100 text-green-700",
-        description: "Su pedido ha sido entregado exitosamente",
-      },
-      "en-transito": {
-        label: "En Tránsito",
-        className: "bg-cyan-100 text-cyan-700",
-        description: "Su pedido está en camino al sitio de obra",
-      },
-      "en-proceso": {
-        label: "En Proceso",
-        className: "bg-blue-100 text-blue-700",
-        description: "Su pedido está siendo preparado",
-      },
-      pendiente: {
-        label: "Pendiente",
-        className: "bg-yellow-100 text-yellow-700",
-        description: "Su pedido ha sido recibido y está en cola",
-      },
-      cancelado: {
-        label: "Cancelado",
-        className: "bg-red-100 text-red-700",
-        description: "Este pedido ha sido cancelado",
-      },
+      entregado: { label: "Entregado", className: "bg-green-100 text-green-700", description: "Su pedido ha sido entregado exitosamente" },
+      "en-transito": { label: "En Tránsito", className: "bg-cyan-100 text-cyan-700", description: "Su pedido está en camino al sitio de obra" },
+      "en-proceso": { label: "En Proceso", className: "bg-blue-100 text-blue-700", description: "Su pedido está siendo preparado" },
+      pendiente: { label: "Pendiente", className: "bg-yellow-100 text-yellow-700", description: "Su pedido ha sido recibido y está en cola" },
     };
-    return variants[status as keyof typeof variants];
+    return variants[status as keyof typeof variants] || variants.pendiente;
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "No definida";
+    return new Date(dateString).toLocaleDateString('es-ES');
   };
 
   return (
@@ -113,7 +79,7 @@ export function PublicSearchPage() {
         <div className="text-center mb-8">
           <h2 className="text-gray-900 mb-3">Buscar Estado de Pedido</h2>
           <p className="text-gray-600">
-            Ingrese su número de pedido para verificar el estado actual
+            Ingrese su número de pedido o factura para verificar el estado actual
           </p>
         </div>
 
@@ -126,26 +92,29 @@ export function PublicSearchPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                placeholder="Ej: PED-2026-001"
+                placeholder="Ej: 1, PED-001, FAC-123"
               />
             </div>
             <Button
               type="submit"
+              disabled={loading}
               className="bg-purple-600 hover:bg-purple-700 text-white px-8"
             >
-              Buscar
+              {loading ? "Buscando..." : "Buscar"}
             </Button>
           </form>
         </div>
 
         {hasSearched && (
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-            {searchResults.length === 0 ? (
+            {loading ? (
+              <div className="p-12 text-center text-gray-500">Cargando resultados...</div>
+            ) : searchResults.length === 0 ? (
               <div className="p-12 text-center">
                 <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-gray-900 mb-2">No se encontró el pedido</h3>
                 <p className="text-gray-600 mb-6">
-                  Verifique que el número de pedido sea correcto
+                  Verifique que el número de pedido o factura sea correcto
                 </p>
                 <p className="text-gray-500 text-sm">
                   ¿Necesita ayuda?{" "}
@@ -166,9 +135,9 @@ export function PublicSearchPage() {
                             <Package className="w-8 h-8 text-purple-600" />
                           </div>
                           <div>
-                            <h3 className="text-gray-900 mb-1">{order.id}</h3>
+                            <h3 className="text-gray-900 mb-1">{order.invoice_number || `PED-${order.id}`}</h3>
                             <p className="text-gray-600">
-                              Fecha de pedido: {order.date}
+                              Fecha de pedido: {formatDate(order.order_date)}
                             </p>
                           </div>
                         </div>
@@ -186,13 +155,13 @@ export function PublicSearchPage() {
 
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="bg-gray-50 rounded-lg p-4">
-                          <p className="text-gray-600 mb-1">Total de Artículos</p>
-                          <p className="text-gray-900 text-xl">{order.items}</p>
+                          <p className="text-gray-600 mb-1">Total Estimado</p>
+                          <p className="text-gray-900 text-xl">${Number(order.total_amount || 0).toFixed(2)}</p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-4">
-                          <p className="text-gray-600 mb-1">Fecha de Pedido</p>
+                          <p className="text-gray-600 mb-1">Fecha de Entrega</p>
                           <p className="text-gray-900 text-xl">
-                            {order.date.split("-")[2]}/{order.date.split("-")[1]}
+                            {formatDate(order.delivery_date)}
                           </p>
                         </div>
                       </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
@@ -10,38 +10,82 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
+import { getInventory, deleteInventoryItem } from "@/api";
+
+interface InventoryItem {
+  id: number;
+  product_name: string;
+  quantity: number;
+  location: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export function InventoryManagement() {
   const navigate = useNavigate();
-  const [inventory, setInventory] = useState([
-    {
-      id: 3,
-      product: "test1",
-      quantity: 2,
-      location: "a",
-      creationDate: "22/04/2026",
-    },
-    {
-      id: 4,
-      product: "Cemento Portland",
-      quantity: 150,
-      location: "Almacén A, Estante 3",
-      creationDate: "20/04/2026",
-    },
-    {
-      id: 5,
-      product: "Varilla 3/8",
-      quantity: 500,
-      location: "Patio Exterior, Zona B",
-      creationDate: "18/04/2026",
-    },
-  ]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleDelete = (id: number) => {
-    if (confirm("¿Está seguro de eliminar este registro de inventario?")) {
-      setInventory(inventory.filter((item) => item.id !== id));
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  const fetchInventory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getInventory();
+      setInventory(response.data || []);
+    } catch (err) {
+      console.error("Error fetching inventory:", err);
+      setError("Error al cargar el inventario");
+    } finally {
+      setLoading(false);
     }
   };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("¿Está seguro de eliminar este registro de inventario?")) {
+      return;
+    }
+
+    try {
+      await deleteInventoryItem(id);
+      setInventory(inventory.filter((item) => item.id !== id));
+      alert("Item de inventario eliminado exitosamente");
+      navigate("/portal/inventory");
+    } catch (err) {
+      console.error("Error deleting inventory item:", err);
+      alert("Error al eliminar el item de inventario");
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-ES');
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="text-gray-600">Cargando inventario...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-700">{error}</p>
+        <Button
+          onClick={fetchInventory}
+          className="mt-2 bg-red-600 hover:bg-red-700 text-white"
+        >
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -68,36 +112,51 @@ export function InventoryManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {inventory.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>{item.id}</TableCell>
-                <TableCell>{item.product}</TableCell>
-                <TableCell>{item.quantity}</TableCell>
-                <TableCell>{item.location}</TableCell>
-                <TableCell>{item.creationDate}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex gap-2 justify-end">
-                    <Button variant="outline" size="sm" className="bg-gray-500 text-white hover:bg-gray-600">
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="bg-blue-500 text-white hover:bg-blue-600"
-                      onClick={() => navigate(`/portal/inventory/edit/${item.id}`)}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="bg-red-500 text-white hover:bg-red-600"
-                      onClick={() => handleDelete(item.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+            {inventory.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  No hay items en el inventario
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              inventory.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>{item.id}</TableCell>
+                  <TableCell>{item.product_name}</TableCell>
+                  <TableCell>{item.quantity}</TableCell>
+                  <TableCell>{item.location || "Sin ubicación"}</TableCell>
+                  <TableCell>
+                    {item.created_at ? formatDate(item.created_at) : "N/A"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-gray-500 text-white hover:bg-gray-600"
+                        onClick={() => navigate(`/portal/inventory/edit/${item.id}`)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-blue-500 text-white hover:bg-blue-600"
+                        onClick={() => navigate(`/portal/inventory/edit/${item.id}`)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-red-500 text-white hover:bg-red-600"
+                        onClick={() => handleDelete(item.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

@@ -8,6 +8,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { createUser, getUserById, updateUser } from "@/api";
+
+const roleOptions = [
+  { value: "admin", label: "Administrador" },
+  { value: "manager", label: "Gerente" },
+  { value: "employee", label: "Empleado" },
+];
+
+const departmentOptions = [
+  { value: "none", label: "Sin asignar" },
+  { value: "sales", label: "Ventas" },
+  { value: "purchasing", label: "Compras" },
+  { value: "warehouse", label: "Almacén" },
+  { value: "route", label: "Ruta" },
+];
 
 export function UserForm() {
   const navigate = useNavigate();
@@ -17,36 +32,103 @@ export function UserForm() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    role: "",
-    department: "",
+    role: "admin",
+    department: "none",
     password: "",
     confirmPassword: "",
   });
+  const [loading, setLoading] = useState(isEdit);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isEdit) {
+    if (isEdit && userId) {
+      fetchUser(userId);
+    }
+  }, [isEdit, userId]);
+
+  const fetchUser = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getUserById(Number(id));
+      const user = response.data || response;
       setFormData({
-        name: "admin",
-        email: "admin@admin.com",
-        role: "Admin",
-        department: "Sin asignar",
+        name: user.name || "",
+        email: user.email || "",
+        role: user.role || "admin",
+        department: user.department || "none",
         password: "",
         confirmPassword: "",
       });
+    } catch (err) {
+      console.error("Error fetching user:", err);
+      setError("Error al cargar el usuario");
+    } finally {
+      setLoading(false);
     }
-  }, [isEdit]);
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.name || !formData.email || !formData.role) {
+      alert("Por favor completa todos los campos obligatorios");
+      return;
+    }
 
     if (!isEdit && formData.password !== formData.confirmPassword) {
       alert("Las contraseñas no coinciden");
       return;
     }
 
-    alert(isEdit ? "Usuario actualizado exitosamente" : "Usuario creado exitosamente");
-    navigate("/portal/users");
+    try {
+      setSaving(true);
+      setError(null);
+
+      const payload: any = {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+        department: formData.department === "none" ? null : formData.department,
+      };
+
+      if (!isEdit || formData.password) {
+        payload.password = formData.password;
+      }
+
+      if (isEdit && userId) {
+        await updateUser(Number(userId), payload);
+        alert("Usuario actualizado exitosamente");
+      } else {
+        await createUser(payload);
+        alert("Usuario creado exitosamente");
+      }
+
+      navigate("/portal/users");
+    } catch (err) {
+      console.error("Error saving user:", err);
+      alert("Error al guardar el usuario. Revisa los datos e inténtalo de nuevo.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="text-gray-600">Cargando usuario...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-700">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -92,9 +174,11 @@ export function UserForm() {
                   <SelectValue placeholder="Seleccionar rol" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Admin">Administrador</SelectItem>
-                  <SelectItem value="Gerente">Gerente</SelectItem>
-                  <SelectItem value="Empleado">Empleado</SelectItem>
+                  {roleOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -105,14 +189,14 @@ export function UserForm() {
               </label>
               <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Sin asignar" />
+                  <SelectValue placeholder="Seleccionar departamento" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Sin asignar">Sin asignar</SelectItem>
-                  <SelectItem value="Operaciones">Operaciones</SelectItem>
-                  <SelectItem value="Ventas">Ventas</SelectItem>
-                  <SelectItem value="Logística">Logística</SelectItem>
-                  <SelectItem value="Administración">Administración</SelectItem>
+                  {departmentOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -160,8 +244,8 @@ export function UserForm() {
           >
             Cancelar
           </Button>
-          <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">
-            {isEdit ? "Actualizar Usuario" : "Guardar Usuario"}
+          <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white" disabled={saving}>
+            {saving ? "Guardando..." : isEdit ? "Actualizar Usuario" : "Guardar Usuario"}
           </Button>
         </div>
       </form>

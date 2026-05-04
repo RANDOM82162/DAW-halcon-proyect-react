@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Button } from "../ui/button";
+import { createInventoryItem, getInventoryById, updateInventoryItem } from "@/api";
 
 export function InventoryForm() {
   const navigate = useNavigate();
@@ -12,22 +13,85 @@ export function InventoryForm() {
     quantity: "",
     location: "",
   });
+  const [loading, setLoading] = useState(isEdit);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isEdit) {
-      setFormData({
-        product: "test1",
-        quantity: "2",
-        location: "a",
-      });
+    if (isEdit && inventoryId) {
+      fetchInventoryItem(inventoryId);
     }
-  }, [isEdit]);
+  }, [isEdit, inventoryId]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    alert(isEdit ? "Inventario actualizado exitosamente" : "Inventario creado exitosamente");
-    navigate("/portal/inventory");
+  const fetchInventoryItem = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getInventoryById(Number(id));
+      const item = response.data || response;
+      setFormData({
+        product: item.product_name || "",
+        quantity: item.quantity?.toString() || "",
+        location: item.location || "",
+      });
+    } catch (err) {
+      console.error("Error fetching inventory item:", err);
+      setError("Error al cargar el inventario");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.product || !formData.quantity) {
+      alert("Por favor completa todos los campos obligatorios");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+
+      const payload = {
+        product_name: formData.product,
+        quantity: Number(formData.quantity),
+        location: formData.location || null,
+      };
+
+      if (isEdit && inventoryId) {
+        await updateInventoryItem(Number(inventoryId), payload);
+        alert("Inventario actualizado exitosamente");
+      } else {
+        await createInventoryItem(payload);
+        alert("Inventario creado exitosamente");
+      }
+
+      navigate("/portal/inventory");
+    } catch (err) {
+      console.error("Error saving inventory item:", err);
+      alert("Error al guardar el inventario. Revisa los datos e inténtalo de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="text-gray-600">Cargando registro de inventario...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-700">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -76,7 +140,6 @@ export function InventoryForm() {
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
               placeholder="Ej: Almacén A, Estante 3"
-              required
             />
           </div>
         </div>
@@ -90,8 +153,8 @@ export function InventoryForm() {
           >
             Cancelar
           </Button>
-          <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">
-            {isEdit ? "Actualizar Registro" : "Guardar Registro"}
+          <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white" disabled={saving}>
+            {saving ? "Guardando..." : isEdit ? "Actualizar Registro" : "Guardar Registro"}
           </Button>
         </div>
       </form>

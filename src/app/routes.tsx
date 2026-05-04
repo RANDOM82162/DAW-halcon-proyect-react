@@ -7,11 +7,13 @@ import { PortalDashboard } from "./components/PortalDashboard";
 import { OrdersManagement } from "./components/orders/OrdersManagement";
 import { ArchivedOrders } from "./components/orders/ArchivedOrders";
 import { OrderForm } from "./components/orders/OrderForm";
+import { OrderDeliveryPhoto } from "./components/orders/OrderDeliveryPhoto";
 import { UsersManagement } from "./components/users/UsersManagement";
 import { UserForm } from "./components/users/UserForm";
 import { InventoryManagement } from "./components/inventory/InventoryManagement";
 import { InventoryForm } from "./components/inventory/InventoryForm";
 import { Support } from "./components/Support";
+import { ProfilePage } from "./components/ProfilePage";
 import { NotFound } from "./components/NotFound";
 
 export const createRouter = (isLoggedIn: boolean, onLogin: (email: string) => void, onLogout: () => void, userName: string) => {
@@ -53,6 +55,10 @@ export const createRouter = (isLoggedIn: boolean, onLogin: (email: string) => vo
           element: <OrderForm />,
         },
         {
+          path: "orders/delivery-photo/:orderId",
+          element: <OrderDeliveryPhoto />,
+        },
+        {
           path: "users",
           element: <UsersManagement />,
         },
@@ -79,6 +85,10 @@ export const createRouter = (isLoggedIn: boolean, onLogin: (email: string) => vo
         {
           path: "support",
           element: <Support />,
+        },
+        {
+          path: "profile",
+          element: <ProfilePage />,
         },
       ],
     },

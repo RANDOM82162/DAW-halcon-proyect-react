@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Eye, Camera } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -10,94 +11,123 @@ import {
   TableRow,
 } from "./ui/table";
 
+interface ProgressItem {
+  date: string;
+  phase: string;
+  progress: number;
+  notes: string;
+  status: string;
+}
+
 export function ConstructionProgress() {
-  const progressData = [
-    {
-      date: "2026-01-15",
-      phase: "Foundation & Excavation",
-      progress: 100,
-      notes: "Completed ahead of schedule",
-      status: "completed",
-    },
-    {
-      date: "2026-02-10",
-      phase: "Structural Framework",
-      progress: 100,
-      notes: "All columns and beams installed",
-      status: "completed",
-    },
-    {
-      date: "2026-03-20",
-      phase: "Floor Slabs - Levels 1-5",
-      progress: 85,
-      notes: "Level 5 in progress",
-      status: "in-progress",
-    },
-    {
-      date: "2026-04-15",
-      phase: "MEP Installation",
-      progress: 45,
-      notes: "Electrical and plumbing roughing",
-      status: "in-progress",
-    },
-    {
-      date: "2026-05-01",
-      phase: "Interior Walls & Partitions",
-      progress: 0,
-      notes: "Scheduled to begin May 2026",
-      status: "pending",
-    },
-  ];
+  const [progressData, setProgressData] = useState<ProgressItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchConstructionProgress();
+  }, []);
+
+  const fetchConstructionProgress = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // TODO: Implement API call to fetch construction progress
+      // const response = await getConstructionProgress();
+      // setProgressData(response.data || []);
+
+      // For now, set empty array to indicate no data
+      setProgressData([]);
+    } catch (err) {
+      console.error("Error fetching construction progress:", err);
+      setError("Error al cargar el progreso de construcción");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      completed: { label: "Completed", className: "bg-green-100 text-green-700" },
-      "in-progress": { label: "In Progress", className: "bg-blue-100 text-blue-700" },
-      pending: { label: "Pending", className: "bg-gray-100 text-gray-700" },
+      completed: { label: "Completado", className: "bg-green-100 text-green-700" },
+      "in-progress": { label: "En Progreso", className: "bg-blue-100 text-blue-700" },
+      pending: { label: "Pendiente", className: "bg-gray-100 text-gray-700" },
     };
-    const variant = variants[status as keyof typeof variants];
+    const variant = variants[status as keyof typeof variants] || variants.pending;
     return <Badge className={variant.className}>{variant.label}</Badge>;
   };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-ES');
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="text-gray-600">Cargando progreso de construcción...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-700">{error}</p>
+        <Button
+          onClick={fetchConstructionProgress}
+          className="mt-2 bg-red-600 hover:bg-red-700 text-white"
+        >
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-gray-900 mb-1">Construction Progress</h2>
-        <p className="text-gray-600">Track the status of each construction phase</p>
+        <h2 className="text-gray-900 mb-1">Progreso de Construcción</h2>
+        <p className="text-gray-600">Seguimiento del estado de cada fase de construcción</p>
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Phase</TableHead>
-              <TableHead>Progress</TableHead>
-              <TableHead>Notes</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Fecha</TableHead>
+              <TableHead>Fase</TableHead>
+              <TableHead>Progreso</TableHead>
+              <TableHead>Notas</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {progressData.map((item, index) => (
-              <TableRow key={index}>
-                <TableCell className="text-gray-600">{item.date}</TableCell>
-                <TableCell>{item.phase}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[100px]">
-                      <div
-                        className="bg-purple-600 h-2 rounded-full"
-                        style={{ width: `${item.progress}%` }}
-                      />
-                    </div>
-                    <span className="text-gray-700 min-w-[45px]">{item.progress}%</span>
-                  </div>
+            {progressData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  No hay datos de progreso de construcción disponibles
                 </TableCell>
-                <TableCell className="text-gray-600">{item.notes}</TableCell>
-                <TableCell>{getStatusBadge(item.status)}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex gap-2 justify-end">
+              </TableRow>
+            ) : (
+              progressData.map((item, index) => (
+                <TableRow key={index}>
+                  <TableCell className="text-gray-600">{formatDate(item.date)}</TableCell>
+                  <TableCell>{item.phase}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[100px]">
+                        <div
+                          className="bg-purple-600 h-2 rounded-full"
+                          style={{ width: `${item.progress}%` }}
+                        />
+                      </div>
+                      <span className="text-gray-700 min-w-[45px]">{item.progress}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-gray-600">{item.notes}</TableCell>
+                  <TableCell>{getStatusBadge(item.status)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-2 justify-end">
                     <Button variant="outline" size="sm">
                       <Eye className="w-4 h-4" />
                     </Button>

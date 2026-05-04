@@ -1,7 +1,7 @@
+import { useState, useRef, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
-import { Home, Package, Users, Box, HelpCircle, LogOut } from "lucide-react";
-import { ChevronRight } from "lucide-react";
-import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Home, Package, Users, Box, HelpCircle, LogOut, ChevronRight, User as UserIcon, Settings } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 interface PortalLayoutProps {
   onLogout: () => void;
@@ -11,6 +11,19 @@ interface PortalLayoutProps {
 export function PortalLayout({ onLogout, userName }: PortalLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const menuItems = [
     { path: "/portal", label: "Dashboard", icon: Home },
@@ -28,6 +41,7 @@ export function PortalLayout({ onLogout, userName }: PortalLayoutProps) {
     if (location.pathname.includes("/users/edit")) return "Editar Usuario";
     if (location.pathname.includes("/inventory/new")) return "Nuevo Inventario";
     if (location.pathname.includes("/inventory/edit")) return "Editar Inventario";
+    if (location.pathname.includes("/portal/profile")) return "Editar Perfil";
 
     const breadcrumbs: Record<string, string> = {
       "/portal": "Dashboard",
@@ -45,6 +59,17 @@ export function PortalLayout({ onLogout, userName }: PortalLayoutProps) {
     .join("")
     .toUpperCase()
     .slice(0, 2) || "CL";
+
+  // Get profile photo from localStorage
+  const userData = JSON.parse(localStorage.getItem("user_data") || "{}");
+  const profilePhoto = userData?.profile_photo;
+
+  const getPhotoUrl = () => {
+    if (!profilePhoto) return null;
+    if (profilePhoto.startsWith("http")) return profilePhoto;
+    if (profilePhoto.startsWith("/storage/")) return `http://localhost:8000${profilePhoto}`;
+    return profilePhoto;
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -99,11 +124,52 @@ export function PortalLayout({ onLogout, userName }: PortalLayoutProps) {
             <span className="text-gray-900">{getBreadcrumb()}</span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-gray-700 capitalize">{userName}</span>
-            <Avatar>
-              <AvatarFallback className="bg-purple-600 text-white">{initials}</AvatarFallback>
-            </Avatar>
+          {/* User Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-3 hover:bg-gray-50 rounded-lg px-3 py-2 transition-colors cursor-pointer"
+            >
+              <span className="text-gray-700 capitalize">{userName}</span>
+              <Avatar className="w-9 h-9">
+                {getPhotoUrl() && (
+                  <AvatarImage src={getPhotoUrl()!} alt={userName} className="object-cover" />
+                )}
+                <AvatarFallback className="bg-purple-600 text-white text-sm">{initials}</AvatarFallback>
+              </Avatar>
+            </button>
+
+            {/* Dropdown Menu */}
+            {dropdownOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-medium text-gray-900 capitalize">{userName}</p>
+                  <p className="text-xs text-gray-500 truncate">{userData?.email || ""}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    navigate("/portal/profile");
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Settings className="w-4 h-4 text-gray-400" />
+                  Editar Perfil
+                </button>
+                <div className="border-t border-gray-100 mt-1 pt-1">
+                  <button
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Cerrar Sesión
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Building2, Lock, Mail, ArrowLeft } from "lucide-react";
 import { Button } from "./ui/button";
+import { login } from "../../api/auth";
 
 interface LoginPageProps {
   onLogin: (email: string) => void;
@@ -11,11 +12,23 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && password) {
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const response = await login(email, password);
       onLogin(email);
+      navigate("/portal");
+    } catch (err: any) {
+      setError(err.message || "Error al iniciar sesión. Verifique sus credenciales.");
+      setPassword("");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -45,6 +58,12 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+              
               <div>
                 <label htmlFor="email" className="block text-gray-700 mb-2">
                   Correo Electrónico
@@ -59,6 +78,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                     className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
                     placeholder="usuario@ejemplo.com"
                     required
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -77,6 +97,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                     className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
                     placeholder="••••••••"
                     required
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -86,6 +107,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   <input
                     type="checkbox"
                     className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 mr-2"
+                    disabled={isLoading}
                   />
                   Recordarme
                 </label>
@@ -97,8 +119,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               <Button
                 type="submit"
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3"
+                disabled={isLoading}
               >
-                Iniciar Sesión
+                {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
               </Button>
             </form>
 

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Eye, Package } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -9,55 +10,42 @@ import {
   TableHeader,
   TableRow,
 } from "./ui/table";
+import { getOrders } from "@/api";
+
+interface Order {
+  id: number;
+  order_number: string;
+  status: string;
+  total_amount: number;
+  created_at: string;
+  delivery_date?: string;
+  site_address?: string;
+  items_count?: number;
+}
 
 export function MyOrders() {
-  const orders = [
-    {
-      id: "PED-2026-089",
-      date: "2026-04-25",
-      deliveryDate: "2026-04-30",
-      site: "Obra Av. Reforma 456",
-      status: "pendiente",
-      items: 15,
-      total: "$22,100",
-    },
-    {
-      id: "PED-2026-045",
-      date: "2026-04-20",
-      deliveryDate: "2026-04-23",
-      site: "Construcción Valle Norte",
-      status: "en-proceso",
-      items: 8,
-      total: "$8,500",
-    },
-    {
-      id: "PED-2026-033",
-      date: "2026-04-18",
-      deliveryDate: "2026-04-21",
-      site: "Desarrollo Residencial Sur",
-      status: "en-transito",
-      items: 10,
-      total: "$12,300",
-    },
-    {
-      id: "PED-2026-001",
-      date: "2026-04-15",
-      deliveryDate: "2026-04-17",
-      site: "Obra Av. Reforma 456",
-      status: "entregado",
-      items: 12,
-      total: "$15,250",
-    },
-    {
-      id: "PED-2026-012",
-      date: "2026-04-10",
-      deliveryDate: "2026-04-13",
-      site: "Torre Ejecutiva Centro",
-      status: "entregado",
-      items: 20,
-      total: "$28,900",
-    },
-  ];
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getOrders();
+      const ordersList = Array.isArray(response) ? response : response.data || [];
+      setOrders(ordersList);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      setError("Error al cargar los pedidos");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -67,9 +55,50 @@ export function MyOrders() {
       pendiente: { label: "Pendiente", className: "bg-yellow-100 text-yellow-700" },
       cancelado: { label: "Cancelado", className: "bg-red-100 text-red-700" },
     };
-    const variant = variants[status as keyof typeof variants];
+    const variant = variants[status as keyof typeof variants] || variants.pendiente;
     return <Badge className={variant.className}>{variant.label}</Badge>;
   };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-ES');
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  // Calculate statistics
+  const stats = {
+    pending: orders.filter((o) => o.status === "pendiente").length,
+    inProcess: orders.filter((o) => o.status === "en-proceso").length,
+    inTransit: orders.filter((o) => o.status === "en-transito").length,
+    delivered: orders.filter((o) => o.status === "entregado").length,
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="text-gray-600">Cargando pedidos...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-700">{error}</p>
+        <Button
+          onClick={fetchOrders}
+          className="mt-2 bg-red-600 hover:bg-red-700 text-white"
+        >
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -98,25 +127,37 @@ export function MyOrders() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orders.map((order) => (
-              <TableRow key={order.id}>
-                <TableCell className="font-medium text-purple-600">
-                  {order.id}
-                </TableCell>
-                <TableCell className="text-gray-600">{order.date}</TableCell>
-                <TableCell className="text-gray-600">{order.deliveryDate}</TableCell>
-                <TableCell>{order.site}</TableCell>
-                <TableCell className="text-center">{order.items}</TableCell>
-                <TableCell>{order.total}</TableCell>
-                <TableCell>{getStatusBadge(order.status)}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="outline" size="sm">
-                    <Eye className="w-4 h-4 mr-2" />
-                    Ver Detalles
-                  </Button>
+            {orders.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                  No hay pedidos disponibles
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              orders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-medium text-purple-600">
+                    {order.order_number || `PED-${order.id}`}
+                  </TableCell>
+                  <TableCell className="text-gray-600">
+                    {order.created_at ? formatDate(order.created_at) : 'N/A'}
+                  </TableCell>
+                  <TableCell className="text-gray-600">
+                    {order.delivery_date ? formatDate(order.delivery_date) : 'Pendiente'}
+                  </TableCell>
+                  <TableCell>{order.site_address || 'No especificado'}</TableCell>
+                  <TableCell className="text-center">{order.items_count || 0}</TableCell>
+                  <TableCell>{formatCurrency(order.total_amount || 0)}</TableCell>
+                  <TableCell>{getStatusBadge(order.status)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="outline" size="sm">
+                      <Eye className="w-4 h-4 mr-2" />
+                      Ver Detalles
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
@@ -129,9 +170,7 @@ export function MyOrders() {
             </div>
             <h4 className="text-gray-900">Pendientes</h4>
           </div>
-          <p className="text-2xl text-gray-900">
-            {orders.filter((o) => o.status === "pendiente").length}
-          </p>
+          <p className="text-2xl text-gray-900">{stats.pending}</p>
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-5">
@@ -141,13 +180,32 @@ export function MyOrders() {
             </div>
             <h4 className="text-gray-900">En Proceso</h4>
           </div>
-          <p className="text-2xl text-gray-900">
-            {orders.filter((o) => o.status === "en-proceso").length}
-          </p>
+          <p className="text-2xl text-gray-900">{stats.inProcess}</p>
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-5">
           <div className="flex items-center gap-3 mb-2">
+            <div className="bg-cyan-100 p-2 rounded-lg">
+              <Package className="w-5 h-5 text-cyan-600" />
+            </div>
+            <h4 className="text-gray-900">En Tránsito</h4>
+          </div>
+          <p className="text-2xl text-gray-900">{stats.inTransit}</p>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="bg-green-100 p-2 rounded-lg">
+              <Package className="w-5 h-5 text-green-600" />
+            </div>
+            <h4 className="text-gray-900">Entregados</h4>
+          </div>
+          <p className="text-2xl text-gray-900">{stats.delivered}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
             <div className="bg-cyan-100 p-2 rounded-lg">
               <Package className="w-5 h-5 text-cyan-600" />
             </div>

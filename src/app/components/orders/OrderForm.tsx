@@ -8,6 +8,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { createOrder, getOrderById, updateOrder } from "@/api";
+
+const statusOptions = [
+  { value: "pendiente", label: "Pendiente" },
+  { value: "en-proceso", label: "En Proceso" },
+  { value: "en-transito", label: "En Tránsito" },
+  { value: "entregado", label: "Entregado" },
+];
 
 export function OrderForm() {
   const navigate = useNavigate();
@@ -17,32 +25,91 @@ export function OrderForm() {
   const [formData, setFormData] = useState({
     clientNumber: "",
     invoiceNumber: "",
-    status: "",
+    status: "pendiente",
     orderDate: "",
     deliveryDate: "",
     totalAmount: "",
     notes: "",
   });
+  const [loading, setLoading] = useState(isEdit);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isEdit) {
-      setFormData({
-        clientNumber: "1",
-        invoiceNumber: "1234",
-        status: "ordered",
-        orderDate: "2026-04-01",
-        deliveryDate: "2026-04-10",
-        totalAmount: "0.01",
-        notes: "Pedido de prueba",
-      });
+    if (isEdit && orderId) {
+      fetchOrder(orderId);
     }
-  }, [isEdit]);
+  }, [isEdit, orderId]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    alert(isEdit ? "Pedido actualizado exitosamente" : "Pedido creado exitosamente");
-    navigate("/portal/orders");
+  const fetchOrder = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getOrderById(Number(id));
+      const order = response.data || response;
+      setFormData({
+        clientNumber: order.customer_number || "",
+        invoiceNumber: order.invoice_number || "",
+        status: order.status || "pendiente",
+        orderDate: order.order_date ? order.order_date.slice(0, 10) : "",
+        deliveryDate: order.delivery_date ? order.delivery_date.slice(0, 10) : "",
+        totalAmount: order.total_amount?.toString() || "",
+        notes: order.notes || "",
+      });
+    } catch (err) {
+      console.error("Error fetching order:", err);
+      setError("Error al cargar el pedido");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.clientNumber || !formData.invoiceNumber || !formData.orderDate || !formData.totalAmount) {
+      alert("Por favor completa todos los campos obligatorios");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+
+      const payload = {
+        customer_number: formData.clientNumber,
+        invoice_number: formData.invoiceNumber,
+        status: formData.status,
+        order_date: formData.orderDate,
+        delivery_date: formData.deliveryDate || null,
+        total_amount: parseFloat(formData.totalAmount),
+        notes: formData.notes || null,
+      };
+
+      if (isEdit && orderId) {
+        await updateOrder(Number(orderId), payload);
+        alert("Pedido actualizado exitosamente");
+      } else {
+        await createOrder(payload);
+        alert("Pedido creado exitosamente");
+      }
+
+      navigate("/portal/orders");
+    } catch (err) {
+      console.error("Error saving order:", err);
+      alert("Error al guardar el pedido. Revisa los datos e inténtalo de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="text-gray-600">Cargando pedido...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -87,10 +154,11 @@ export function OrderForm() {
                 <SelectValue placeholder="Seleccionar estado" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ordered">Ordered</SelectItem>
-                <SelectItem value="in-process">En Proceso</SelectItem>
-                <SelectItem value="delivered">Entregado</SelectItem>
-                <SelectItem value="cancelled">Cancelado</SelectItem>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -119,7 +187,6 @@ export function OrderForm() {
               value={formData.deliveryDate}
               onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
-              required
             />
           </div>
 
@@ -161,8 +228,8 @@ export function OrderForm() {
           >
             Cancelar
           </Button>
-          <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">
-            {isEdit ? "Actualizar Pedido" : "Guardar Pedido"}
+          <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white" disabled={saving}>
+            {saving ? "Guardando..." : isEdit ? "Actualizar Pedido" : "Guardar Pedido"}
           </Button>
         </div>
       </form>

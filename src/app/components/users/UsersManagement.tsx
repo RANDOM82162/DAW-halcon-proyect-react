@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
@@ -11,58 +11,93 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
+import { deleteUser, getUsers } from "@/api";
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  department: string | null;
+  deleted_at?: string | null;
+  created_at?: string;
+}
 
 export function UsersManagement() {
   const navigate = useNavigate();
-  const [users, setUsers] = useState([
-    {
-      id: 2,
-      name: "admin",
-      email: "admin@admin.com",
-      role: "Admin",
-      department: "Sin asignar",
-      status: "Activo",
-      registrationDate: "22/04/2026",
-    },
-    {
-      id: 3,
-      name: "Juan Pérez",
-      email: "juan@constructora.com",
-      role: "Gerente",
-      department: "Operaciones",
-      status: "Activo",
-      registrationDate: "15/03/2026",
-    },
-    {
-      id: 4,
-      name: "María García",
-      email: "maria@constructora.com",
-      role: "Empleado",
-      department: "Ventas",
-      status: "Activo",
-      registrationDate: "10/02/2026",
-    },
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleDelete = (id: number) => {
-    if (confirm("¿Está seguro de eliminar este usuario?")) {
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getUsers();
+      const result = response.data || response;
+      const usersList = Array.isArray(result) ? result : result.data || [];
+      setUsers(usersList);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setError("Error al cargar los usuarios");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("¿Está seguro de eliminar este usuario?")) {
+      return;
+    }
+
+    try {
+      await deleteUser(id);
       setUsers(users.filter((user) => user.id !== id));
+      alert("Usuario eliminado exitosamente");
+    } catch (err) {
+      console.error("Error deleting user:", err);
+      alert("Error al eliminar el usuario");
     }
   };
 
   const getRoleBadge = (role: string) => {
     const variants = {
-      Admin: { className: "bg-red-500 text-white" },
-      Gerente: { className: "bg-blue-500 text-white" },
-      Empleado: { className: "bg-gray-500 text-white" },
+      admin: { className: "bg-red-500 text-white", label: "Administrador" },
+      manager: { className: "bg-blue-500 text-white", label: "Gerente" },
+      employee: { className: "bg-gray-500 text-white", label: "Empleado" },
     };
-    const variant = variants[role as keyof typeof variants];
-    return <Badge className={variant.className}>{role}</Badge>;
+    const variant = variants[role as keyof typeof variants] || variants.employee;
+    return <Badge className={variant.className}>{variant.label}</Badge>;
   };
 
-  const getStatusBadge = (status: string) => {
-    return <Badge className="bg-green-500 text-white">{status}</Badge>;
+  const getStatusBadge = (deletedAt: string | null | undefined) => {
+    return <Badge className="bg-green-500 text-white">{deletedAt ? "Archivado" : "Activo"}</Badge>;
   };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString("es-ES");
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="text-gray-600">Cargando usuarios...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-700">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -91,35 +126,43 @@ export function UsersManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>{user.id}</TableCell>
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{getRoleBadge(user.role)}</TableCell>
-                <TableCell>{user.department}</TableCell>
-                <TableCell>{getStatusBadge(user.status)}</TableCell>
-                <TableCell>{user.registrationDate}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex gap-2 justify-end">
-                    <Button
-                      size="sm"
-                      className="bg-blue-500 text-white hover:bg-blue-600"
-                      onClick={() => navigate(`/portal/users/edit/${user.id}`)}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="bg-red-500 text-white hover:bg-red-600"
-                      onClick={() => handleDelete(user.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+            {users.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                  No hay usuarios registrados
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>{user.id}</TableCell>
+                  <TableCell>{user.name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{getRoleBadge(user.role)}</TableCell>
+                  <TableCell>{user.department || "Sin asignar"}</TableCell>
+                  <TableCell>{getStatusBadge(user.deleted_at)}</TableCell>
+                  <TableCell>{formatDate(user.created_at)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        size="sm"
+                        className="bg-blue-500 text-white hover:bg-blue-600"
+                        onClick={() => navigate(`/portal/users/edit/${user.id}`)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-red-500 text-white hover:bg-red-600"
+                        onClick={() => handleDelete(user.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
