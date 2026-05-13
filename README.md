@@ -37,4 +37,4 @@ Crea un archivo `.env` en la raíz del proyecto y configura las siguientes varia
 
 ## Licencias
 
-Este proyecto está bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.
+Este proyecto fue desarrollado con fines académicos como parte de la materia de Diseño de Aplicaciones Web.
