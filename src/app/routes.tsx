@@ -16,7 +16,7 @@ import { Support } from "./components/Support";
 import { ProfilePage } from "./components/ProfilePage";
 import { NotFound } from "./components/NotFound";
 
-export const createRouter = (isLoggedIn: boolean, onLogin: (email: string) => void, onLogout: () => void, userName: string) => {
+export const createRouter = (isLoggedIn: boolean, onLogin: (email: string) => void, onLogout: () => void, userName: string, userRole: string) => {
   return createBrowserRouter([
     {
       path: "/",
@@ -32,7 +32,7 @@ export const createRouter = (isLoggedIn: boolean, onLogin: (email: string) => vo
     },
     {
       path: "/portal",
-      element: isLoggedIn ? <PortalLayout onLogout={onLogout} userName={userName} /> : <Navigate to="/login" replace />,
+      element: isLoggedIn ? <PortalLayout onLogout={onLogout} userName={userName} userRole={userRole} /> : <Navigate to="/login" replace />,
       children: [
         {
           index: true,
@@ -81,6 +81,10 @@ export const createRouter = (isLoggedIn: boolean, onLogin: (email: string) => vo
         {
           path: "inventory/edit/:inventoryId",
           element: <InventoryForm />,
+        },
+        {
+          path: "inventory/view/:inventoryId",
+          element: <InventoryForm isView={true} />,
         },
         {
           path: "support",

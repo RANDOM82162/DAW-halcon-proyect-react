@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { getOrders, deleteOrder } from "@/api";
+import { getUserData } from "@/api/auth";
 
 interface Order {
   id: number;
@@ -38,6 +39,9 @@ export function OrdersManagement() {
   const [loading, setLoading] = useState(true);
   const [previewOrder, setPreviewOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const userData = getUserData();
+  const userRole = userData?.role || "employee";
 
   useEffect(() => {
     fetchOrders();
@@ -191,20 +195,24 @@ export function OrdersManagement() {
                       >
                         <Camera className="w-4 h-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        className="bg-blue-500 text-white hover:bg-blue-600"
-                        onClick={() => navigate(`/portal/orders/edit/${order.id}`)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="bg-red-500 text-white hover:bg-red-600"
-                        onClick={() => handleDelete(order.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {(userRole === "admin" || userRole === "manager") && (
+                        <Button
+                          size="sm"
+                          className="bg-blue-500 text-white hover:bg-blue-600"
+                          onClick={() => navigate(`/portal/orders/edit/${order.id}`)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {userRole === "admin" && (
+                        <Button
+                          size="sm"
+                          className="bg-red-500 text-white hover:bg-red-600"
+                          onClick={() => handleDelete(order.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

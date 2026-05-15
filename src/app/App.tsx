@@ -6,6 +6,7 @@ import { getAuthToken, getUserData, removeAuthToken, removeUserData, logout as a
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
+  const [userRole, setUserRole] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   // Check if user is already logged in on app load
@@ -16,6 +17,7 @@ export default function App() {
     if (token && userData) {
       setIsLoggedIn(true);
       setUserName(userData.name || userData.email.split("@")[0]);
+      setUserRole(userData.role || "");
     }
     
     setIsLoading(false);
@@ -25,6 +27,7 @@ export default function App() {
     setIsLoggedIn(true);
     const userData = getUserData();
     setUserName(userData?.name || email.split("@")[0]);
+    setUserRole(userData?.role || "");
   };
 
   const handleLogout = async () => {
@@ -35,12 +38,13 @@ export default function App() {
     } finally {
       setIsLoggedIn(false);
       setUserName("");
+      setUserRole("");
     }
   };
 
   const router = useMemo(
-    () => createRouter(isLoggedIn, handleLogin, handleLogout, userName),
-    [isLoggedIn, userName]
+    () => createRouter(isLoggedIn, handleLogin, handleLogout, userName, userRole),
+    [isLoggedIn, userName, userRole]
   );
 
   if (isLoading) {

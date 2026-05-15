@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import { Button } from "../ui/button";
 import { createInventoryItem, getInventoryById, updateInventoryItem } from "@/api";
 
-export function InventoryForm() {
+export function InventoryForm({ isView = false }: { isView?: boolean }) {
   const navigate = useNavigate();
   const { inventoryId } = useParams();
   const isEdit = !!inventoryId;
@@ -96,7 +96,7 @@ export function InventoryForm() {
   return (
     <div className="space-y-6">
       <h2 className="text-gray-900">
-        {isEdit ? "Editar Registro de Inventario" : "Crear Nuevo Registro de Inventario"}
+        {isView ? "Detalles del Registro de Inventario" : isEdit ? "Editar Registro de Inventario" : "Crear Nuevo Registro de Inventario"}
       </h2>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6 max-w-3xl">
@@ -110,8 +110,9 @@ export function InventoryForm() {
               id="product"
               value={formData.product}
               onChange={(e) => setFormData({ ...formData, product: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 ${isView ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               required
+              disabled={isView}
             />
           </div>
 
@@ -124,8 +125,9 @@ export function InventoryForm() {
               id="quantity"
               value={formData.quantity}
               onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 ${isView ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               required
+              disabled={isView}
             />
           </div>
 
@@ -138,8 +140,9 @@ export function InventoryForm() {
               id="location"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 ${isView ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               placeholder="Ej: Almacén A, Estante 3"
+              disabled={isView}
             />
           </div>
         </div>
@@ -151,11 +154,13 @@ export function InventoryForm() {
             onClick={() => navigate("/portal/inventory")}
             className="bg-gray-500 text-white hover:bg-gray-600"
           >
-            Cancelar
+            {isView ? "Volver" : "Cancelar"}
           </Button>
-          <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white" disabled={saving}>
-            {saving ? "Guardando..." : isEdit ? "Actualizar Registro" : "Guardar Registro"}
-          </Button>
+          {!isView && (
+            <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white" disabled={saving}>
+              {saving ? "Guardando..." : isEdit ? "Actualizar Registro" : "Guardar Registro"}
+            </Button>
+          )}
         </div>
       </form>
     </div>

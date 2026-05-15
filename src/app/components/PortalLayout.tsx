@@ -6,9 +6,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 interface PortalLayoutProps {
   onLogout: () => void;
   userName: string;
+  userRole: string;
 }
 
-export function PortalLayout({ onLogout, userName }: PortalLayoutProps) {
+export function PortalLayout({ onLogout, userName, userRole }: PortalLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -25,13 +26,15 @@ export function PortalLayout({ onLogout, userName }: PortalLayoutProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const menuItems = [
+  const baseMenuItems = [
     { path: "/portal", label: "Dashboard", icon: Home },
     { path: "/portal/orders", label: "Pedidos", icon: Package },
-    { path: "/portal/users", label: "Usuarios", icon: Users },
+    { path: "/portal/users", label: "Usuarios", icon: Users, roles: ["admin"] },
     { path: "/portal/inventory", label: "Inventario", icon: Box },
     { path: "/portal/support", label: "Soporte", icon: HelpCircle },
   ];
+
+  const menuItems = baseMenuItems.filter(item => !item.roles || item.roles.includes(userRole));
 
   const getBreadcrumb = () => {
     if (location.pathname.includes("/orders/new")) return "Nuevo Pedido";

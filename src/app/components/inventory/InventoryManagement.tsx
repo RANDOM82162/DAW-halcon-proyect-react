@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { getInventory, deleteInventoryItem } from "@/api";
+import { getUserData } from "@/api/auth";
 
 interface InventoryItem {
   id: number;
@@ -26,6 +27,9 @@ export function InventoryManagement() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const userData = getUserData();
+  const userRole = userData?.role || "employee";
 
   useEffect(() => {
     fetchInventory();
@@ -91,12 +95,14 @@ export function InventoryManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-gray-900">Gestión de Inventario</h2>
-        <Button
-          onClick={() => navigate("/portal/inventory/new")}
-          className="bg-purple-600 hover:bg-purple-700 text-white"
-        >
-          Nuevo Inventario
-        </Button>
+        {(userRole === "admin" || userRole === "manager") && (
+          <Button
+            onClick={() => navigate("/portal/inventory/new")}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            Nuevo Inventario
+          </Button>
+        )}
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -134,24 +140,28 @@ export function InventoryManagement() {
                         variant="outline"
                         size="sm"
                         className="bg-gray-500 text-white hover:bg-gray-600"
-                        onClick={() => navigate(`/portal/inventory/edit/${item.id}`)}
+                        onClick={() => navigate(`/portal/inventory/view/${item.id}`)}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        className="bg-blue-500 text-white hover:bg-blue-600"
-                        onClick={() => navigate(`/portal/inventory/edit/${item.id}`)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="bg-red-500 text-white hover:bg-red-600"
-                        onClick={() => handleDelete(item.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {(userRole === "admin" || userRole === "manager") && (
+                        <Button
+                          size="sm"
+                          className="bg-blue-500 text-white hover:bg-blue-600"
+                          onClick={() => navigate(`/portal/inventory/edit/${item.id}`)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {userRole === "admin" && (
+                        <Button
+                          size="sm"
+                          className="bg-red-500 text-white hover:bg-red-600"
+                          onClick={() => handleDelete(item.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
