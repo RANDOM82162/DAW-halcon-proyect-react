@@ -31,6 +31,7 @@ interface Order {
   user?: { name: string };
   invoice_number?: string;
   client_number?: string;
+  customer_number?: string;
   delivery_photo?: string;
 }
 
@@ -239,7 +240,7 @@ export function OrdersManagement() {
                   <div className="space-y-2 text-sm">
                     <p className="flex justify-between"><span className="text-gray-500">ID del Sistema:</span> <span className="font-medium">{previewOrder.id}</span></p>
                     <p className="flex justify-between"><span className="text-gray-500">Número de Factura:</span> <span className="font-medium">{previewOrder.invoice_number || 'N/A'}</span></p>
-                    <p className="flex justify-between"><span className="text-gray-500">Cliente / Ref:</span> <span className="font-medium">{previewOrder.client_number || 'N/A'}</span></p>
+                    <p className="flex justify-between"><span className="text-gray-500">Cliente / Ref:</span> <span className="font-medium">{previewOrder.customer_number || previewOrder.client_number || 'N/A'}</span></p>
                     <p className="flex justify-between"><span className="text-gray-500">Estado:</span> <span>{getStatusBadge(previewOrder.status)}</span></p>
                     <p className="flex justify-between"><span className="text-gray-500">Monto Total:</span> <span className="font-medium">{formatCurrency(previewOrder.total_amount || 0)}</span></p>
                     <p className="flex justify-between"><span className="text-gray-500">Fecha de Creación:</span> <span className="font-medium">{previewOrder.created_at ? formatDate(previewOrder.created_at) : 'N/A'}</span></p>
