@@ -28,6 +28,7 @@ interface Order {
   created_at: string;
   user_id?: number;
   user_name?: string;
+  user?: { name: string };
   invoice_number?: string;
   client_number?: string;
   delivery_photo?: string;
@@ -177,7 +178,7 @@ export function OrdersManagement() {
                     {order.created_at ? formatDate(order.created_at) : 'N/A'}
                   </TableCell>
                   <TableCell>{formatCurrency(order.total_amount || 0)}</TableCell>
-                  <TableCell>{order.user_name || 'N/A'}</TableCell>
+                  <TableCell>{order.user?.name || order.user_name || 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-2 justify-end">
                       <Button
@@ -242,7 +243,7 @@ export function OrdersManagement() {
                     <p className="flex justify-between"><span className="text-gray-500">Estado:</span> <span>{getStatusBadge(previewOrder.status)}</span></p>
                     <p className="flex justify-between"><span className="text-gray-500">Monto Total:</span> <span className="font-medium">{formatCurrency(previewOrder.total_amount || 0)}</span></p>
                     <p className="flex justify-between"><span className="text-gray-500">Fecha de Creación:</span> <span className="font-medium">{previewOrder.created_at ? formatDate(previewOrder.created_at) : 'N/A'}</span></p>
-                    <p className="flex justify-between"><span className="text-gray-500">Creado por:</span> <span className="font-medium">{previewOrder.user_name || 'N/A'}</span></p>
+                    <p className="flex justify-between"><span className="text-gray-500">Creado por:</span> <span className="font-medium">{previewOrder.user?.name || previewOrder.user_name || 'N/A'}</span></p>
                   </div>
                 </div>
               </div>
